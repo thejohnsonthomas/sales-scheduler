@@ -127,7 +127,7 @@ export default function AdminPage() {
 
         {editingUser && (
           <div className="card fixed inset-0 m-auto max-w-lg max-h-[90vh] overflow-y-auto z-10">
-            <h2 className="font-semibold mb-4">Edit User: {editingUser.email}</h2>
+            <h2 className="font-semibold mb-4">Edit User: {String(editingUser.email)}</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm mb-1">Role</label>
