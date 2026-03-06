@@ -23,6 +23,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ users });
 }
 
+const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  role: z.enum(['ADMIN', 'SOLUTION_ENGINEER', 'ACCOUNT_EXECUTIVE']).default('ACCOUNT_EXECUTIVE'),
+});
+
 const updateUserSchema = z.object({
   role: z.enum(['ADMIN', 'SOLUTION_ENGINEER', 'ACCOUNT_EXECUTIVE']).optional(),
   enabled: z.boolean().optional(),
@@ -31,6 +37,38 @@ const updateUserSchema = z.object({
   maxMeetingsPerDay: z.number().min(1).max(20).optional(),
   maxMeetingsPerWeek: z.number().min(1).max(50).optional(),
 });
+
+export async function POST(req: NextRequest) {
+  try {
+    await requireAdmin();
+  } catch {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const parsed = createUserSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+  }
+
+  const { email, name, role } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 });
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      email,
+      name: name ?? null,
+      role,
+      enabled: true,
+    },
+  });
+
+  return NextResponse.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+}
 
 export async function PATCH(req: NextRequest) {
   try {

@@ -10,6 +10,10 @@ export default function AdminPage() {
   const { status } = useSession();
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<Record<string, unknown> | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<string>(Role.ACCOUNT_EXECUTIVE);
 
   const { data: usersData } = useQuery({
     queryKey: ['admin-users'],
@@ -45,6 +49,28 @@ export default function AdminPage() {
     },
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: async (payload: { email: string; name?: string; role: string }) => {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Failed to add user');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setShowAddUser(false);
+      setNewUserEmail('');
+      setNewUserName('');
+      setNewUserRole(Role.ACCOUNT_EXECUTIVE);
+    },
+  });
+
   const users = usersData?.users ?? [];
   const segments = segmentsData?.segments ?? [];
   const regions = regionsData?.regions ?? [];
@@ -64,7 +90,16 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold mb-6">Admin Panel</h1>
 
         <div className="card mb-6">
-          <h2 className="font-semibold mb-4">Users</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-semibold">Users</h2>
+            <button
+              type="button"
+              onClick={() => setShowAddUser(true)}
+              className="btn-primary"
+            >
+              Add User
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -124,6 +159,81 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+
+        {showAddUser && (
+          <div className="card fixed inset-0 m-auto max-w-lg max-h-[90vh] overflow-y-auto z-10 bg-[var(--card)]">
+            <h2 className="font-semibold mb-4">Add User (AE or SE)</h2>
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Enter the user&apos;s work email. They will sign in with Google; after first login they can be assigned segments and regions here.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="input"
+                  placeholder="colleague@company.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Name (optional)</label>
+                <input
+                  type="text"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  className="input"
+                  placeholder="Display name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Role</label>
+                <select
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value)}
+                  className="input"
+                >
+                  <option value={Role.ACCOUNT_EXECUTIVE}>Account Executive</option>
+                  <option value={Role.SOLUTION_ENGINEER}>Solution Engineer</option>
+                  <option value={Role.ADMIN}>Admin</option>
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    createUserMutation.mutate({
+                      email: newUserEmail.trim(),
+                      name: newUserName.trim() || undefined,
+                      role: newUserRole,
+                    });
+                  }}
+                  disabled={!newUserEmail.trim() || createUserMutation.isPending}
+                  className="btn-primary"
+                >
+                  {createUserMutation.isPending ? 'Adding...' : 'Add User'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddUser(false);
+                    setNewUserEmail('');
+                    setNewUserName('');
+                  }}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+              {createUserMutation.isError && (
+                <p className="text-sm text-[var(--danger)]">
+                  {(createUserMutation.error as Error).message}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {editingUser && (
           <div className="card fixed inset-0 m-auto max-w-lg max-h-[90vh] overflow-y-auto z-10">
