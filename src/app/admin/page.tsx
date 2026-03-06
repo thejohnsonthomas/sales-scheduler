@@ -107,8 +107,8 @@ export default function AdminPage() {
                             email: u.email,
                             role: u.role,
                             enabled: u.enabled,
-                            segmentIds: u.userSegments.map((us) => (us as { segment: { id: string } }).segment.id),
-                            regionIds: u.userRegions.map((ur) => (ur as { region: { id: string } }).region.id),
+                            segmentIds: u.userSegments.map((us) => (us as unknown as { segment: { id: string } }).segment.id),
+                            regionIds: u.userRegions.map((ur) => (ur as unknown as { region: { id: string } }).region.id),
                             maxMeetingsPerDay: (u as { capacityLimits?: { maxMeetingsPerDay: number } }).capacityLimits?.maxMeetingsPerDay ?? 6,
                             maxMeetingsPerWeek: (u as { capacityLimits?: { maxMeetingsPerWeek: number } }).capacityLimits?.maxMeetingsPerWeek ?? 25,
                           })
