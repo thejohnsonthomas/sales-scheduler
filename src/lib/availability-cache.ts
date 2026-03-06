@@ -33,7 +33,8 @@ export function invalidateAvailability(aeId?: string, segmentId?: string, region
     cache.clear();
     return;
   }
-  for (const key of cache.keys()) {
+  const keys = Array.from(cache.keys());
+  for (const key of keys) {
     if (aeId && key.includes(aeId)) cache.delete(key);
     else if (segmentId && key.includes(segmentId)) cache.delete(key);
     else if (regionId && key.includes(regionId)) cache.delete(key);
