@@ -48,6 +48,7 @@ export default function MeetingsPage() {
               region: { name: string };
               ae?: { name: string | null; email: string };
               se?: { name: string | null; email: string };
+              status?: string;
             }) => (
               <div key={m.id} className="card flex justify-between items-start">
                 <div>
@@ -74,7 +75,7 @@ export default function MeetingsPage() {
                   )}
                 </div>
                 <span className="px-2 py-1 rounded text-xs bg-[var(--success)]/20 text-[var(--success)]">
-                  {m.status}
+                  {m.status ?? 'scheduled'}
                 </span>
               </div>
             ))}
