@@ -5,8 +5,38 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Nav } from '@/components/Nav';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toZonedTime } from 'date-fns-tz';
+import { format } from 'date-fns';
 
 const DURATIONS = [15, 30, 45, 60];
+
+const TIMEZONES = [
+  { value: 'UTC', label: 'UTC' },
+  { value: 'America/New_York', label: 'Eastern (US)' },
+  { value: 'America/Chicago', label: 'Central (US)' },
+  { value: 'America/Denver', label: 'Mountain (US)' },
+  { value: 'America/Los_Angeles', label: 'Pacific (US)' },
+  { value: 'Europe/London', label: 'London' },
+  { value: 'Europe/Paris', label: 'Paris' },
+  { value: 'Europe/Berlin', label: 'Berlin' },
+  { value: 'Asia/Dubai', label: 'Dubai' },
+  { value: 'Asia/Kolkata', label: 'India' },
+  { value: 'Asia/Singapore', label: 'Singapore' },
+  { value: 'Australia/Sydney', label: 'Sydney' },
+];
+
+function formatSlotInTimezone(
+  dateStr: string,
+  timeStr: string,
+  timezone: string
+): { dateLabel: string; timeLabel: string } {
+  const utcDate = new Date(`${dateStr}T${timeStr}:00.000Z`);
+  const zoned = toZonedTime(utcDate, timezone);
+  return {
+    dateLabel: format(zoned, 'dd MMM yy'),
+    timeLabel: format(zoned, 'h:mm a'),
+  };
+}
 
 export default function SchedulePage() {
   const { data: session, status } = useSession();
@@ -21,6 +51,7 @@ export default function SchedulePage() {
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; startTime: string } | null>(null);
   const [slots, setSlots] = useState<{ startTime: string; endTime: string; date: string }[]>([]);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [timezone, setTimezone] = useState('America/New_York');
 
   const { data: segments } = useQuery({
     queryKey: ['segments'],
@@ -157,6 +188,18 @@ export default function SchedulePage() {
               </select>
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Display timezone</label>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="input max-w-xs"
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Duration</label>
@@ -210,29 +253,38 @@ export default function SchedulePage() {
         )}
         {slots.length > 0 && (
           <div className="card mb-6">
-            <h2 className="font-semibold mb-4">Available Slots</h2>
+            <h2 className="font-semibold mb-1">Available Slots</h2>
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Date: DD Mon YY · Time: 12hr · Timezone: {TIMEZONES.find((t) => t.value === timezone)?.label ?? timezone}
+            </p>
             <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
-              {slots.map((slot) => (
-                <button
-                  key={`${slot.date}-${slot.startTime}`}
-                  onClick={() => setSelectedSlot({ date: slot.date, startTime: slot.startTime })}
-                  className={`p-2 rounded-lg text-sm border transition-colors ${
-                    selectedSlot?.date === slot.date && selectedSlot?.startTime === slot.startTime
-                      ? 'border-[var(--accent)] bg-[var(--accent)]/20'
-                      : 'border-[var(--border)] hover:border-[var(--accent)]'
-                  }`}
-                >
-                  {slot.date} {slot.startTime}
-                </button>
-              ))}
+              {slots.map((slot) => {
+                const { dateLabel, timeLabel } = formatSlotInTimezone(slot.date, slot.startTime, timezone);
+                return (
+                  <button
+                    key={`${slot.date}-${slot.startTime}`}
+                    onClick={() => setSelectedSlot({ date: slot.date, startTime: slot.startTime })}
+                    className={`p-2 rounded-lg text-sm border transition-colors text-left ${
+                      selectedSlot?.date === slot.date && selectedSlot?.startTime === slot.startTime
+                        ? 'border-[var(--accent)] bg-[var(--accent)]/20'
+                        : 'border-[var(--border)] hover:border-[var(--accent)]'
+                    }`}
+                  >
+                    <span className="block font-medium">{dateLabel}</span>
+                    <span className="block text-[var(--muted)]">{timeLabel}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {selectedSlot && (
+        {selectedSlot && (() => {
+          const { dateLabel, timeLabel } = formatSlotInTimezone(selectedSlot.date, selectedSlot.startTime, timezone);
+          return (
           <div className="card">
             <p className="mb-4">
-              Selected: {selectedSlot.date} at {selectedSlot.startTime}
+              Selected: {dateLabel} at {timeLabel}
             </p>
             <button
               onClick={() => scheduleMutation.mutate()}
@@ -247,7 +299,8 @@ export default function SchedulePage() {
               </p>
             )}
           </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );
