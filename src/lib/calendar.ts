@@ -30,6 +30,10 @@ export interface BusySlot {
   end: Date;
 }
 
+/**
+ * Fetches busy slots from Google Calendar. Only events marked as "Busy" (opaque)
+ * block time; events marked as "Free" (transparent) do not block and can be scheduled over.
+ */
 export async function getBusySlots(
   userId: string,
   startDate: Date,
@@ -37,21 +41,42 @@ export async function getBusySlots(
 ): Promise<BusySlot[]> {
   const calendar = await getCalendarClient(userId);
 
-  const response = await calendar.freebusy.query({
-    requestBody: {
-      timeMin: formatISO(startDate),
-      timeMax: formatISO(endDate),
-      items: [{ id: 'primary' }],
-    },
-  });
+  const timeMin = formatISO(startDate);
+  const timeMax = formatISO(endDate);
 
-  const busy = response.data.calendars?.primary?.busy ?? [];
-  return busy
-    .filter((b) => b.start && b.end)
-    .map((b) => ({
-      start: new Date(b.start!),
-      end: new Date(b.end!),
-    }));
+  const busy: BusySlot[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      pageToken,
+    });
+
+    const events = response.data.items ?? [];
+    for (const event of events) {
+      // Only block on "Busy" events. "Free" (transparent) events do not block.
+      if (event.transparency === 'transparent') continue;
+
+      const start = event.start?.dateTime ?? event.start?.date;
+      const end = event.end?.dateTime ?? event.end?.date;
+      if (!start || !end) continue;
+
+      const startDateObj = new Date(start);
+      const endDateObj = new Date(end);
+      if (Number.isNaN(startDateObj.getTime()) || Number.isNaN(endDateObj.getTime())) continue;
+
+      busy.push({ start: startDateObj, end: endDateObj });
+    }
+
+    pageToken = response.data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return busy;
 }
 
 export function addBufferToBusySlots(slots: BusySlot[]): BusySlot[] {
