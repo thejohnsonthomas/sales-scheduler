@@ -48,28 +48,60 @@ a {
     @apply px-4 py-2.5 rounded-xl font-medium transition-all duration-200;
   }
   .btn-primary {
-    @apply btn bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] hover:shadow-lg hover:shadow-[var(--accent)]/25;
+    @apply btn text-white;
+    background-color: var(--accent);
+  }
+  .btn-primary:hover {
+    background-color: var(--accent-hover);
+    box-shadow: 0 10px 15px -3px rgb(14 165 233 / 0.25), 0 4px 6px -4px rgb(14 165 233 / 0.25);
   }
   .btn-secondary {
-    @apply btn bg-[var(--card)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--card-hover)] hover:border-[var(--accent)]/50;
+    @apply btn border border-[var(--border)] transition-all duration-200;
+    background-color: var(--card);
+    color: var(--text);
+  }
+  .btn-secondary:hover {
+    background-color: var(--card-hover);
+    border-color: rgba(14, 165, 233, 0.5);
   }
   .card {
-    @apply bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 transition-all duration-200;
+    @apply rounded-2xl p-6 transition-all duration-200;
+    background-color: var(--card);
+    border: 1px solid var(--border);
   }
   .card-lively {
-    @apply card hover:border-[var(--accent)]/30 hover:shadow-lg hover:shadow-[var(--accent)]/5;
+    @apply card transition-all duration-200;
+  }
+  .card-lively:hover {
+    border-color: rgba(14, 165, 233, 0.3);
+    box-shadow: 0 10px 15px -3px rgb(14 165 233 / 0.05), 0 4px 6px -4px rgb(14 165 233 / 0.05);
   }
   .input {
-    @apply w-full px-4 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition-all;
+    @apply w-full px-4 py-2.5 rounded-xl transition-all;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .input::placeholder {
+    color: var(--muted);
+  }
+  .input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent);
+    border-color: transparent;
   }
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium;
   }
   .badge-success {
-    @apply badge bg-[var(--success-soft)] text-[var(--success)];
+    @apply badge;
+    background-color: var(--success-soft);
+    color: var(--success);
   }
   .badge-warning {
-    @apply badge bg-[var(--warning-soft)] text-[var(--warning)];
+    @apply badge;
+    background-color: var(--warning-soft);
+    color: var(--warning);
   }
 }
 
