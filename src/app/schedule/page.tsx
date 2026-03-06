@@ -33,7 +33,7 @@ function formatSlotInTimezone(
   const utcDate = new Date(`${dateStr}T${timeStr}:00.000Z`);
   const zoned = toZonedTime(utcDate, timezone);
   return {
-    dateLabel: format(zoned, 'dd MMM yy'),
+    dateLabel: format(zoned, 'dd MMMM yyyy'),
     timeLabel: format(zoned, 'h:mm a'),
   };
 }
@@ -168,6 +168,20 @@ export default function SchedulePage() {
         <p className="text-[var(--muted)] mb-8">Book a demo on the SE&apos;s calendar; you and the customer are added as participants.</p>
 
         <div className="card-lively mb-8 space-y-5">
+          <div className="p-3 rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)]/30">
+            <label className="block text-sm font-semibold mb-2 text-[var(--accent)]">Timezone</label>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="input max-w-sm bg-[var(--card)]"
+              aria-label="Choose timezone for slot times"
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-[var(--muted)] mt-1.5">Slots and times below use this timezone. Date = DD Month YYYY, Time = 12hr.</p>
+          </div>
           <div>
             <label className="block text-sm font-medium mb-1">Customer Email</label>
             <input
@@ -205,18 +219,6 @@ export default function SchedulePage() {
                 ))}
               </select>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Display timezone</label>
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="input max-w-xs"
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>{tz.label}</option>
-              ))}
-            </select>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -283,7 +285,7 @@ export default function SchedulePage() {
           <div className="card-lively mb-8 border-l-4 border-l-[var(--accent)]">
             <h2 className="font-semibold text-lg mb-1">Available Slots</h2>
             <p className="text-sm text-[var(--muted)] mb-5">
-              Date: DD Mon YY · Time: 12hr · Timezone: {TIMEZONES.find((t) => t.value === timezone)?.label ?? timezone}
+              Date: DD Month YYYY · Time: 12hr (e.g. 2:30 PM) · Timezone: <strong className="text-[var(--accent)]">{TIMEZONES.find((t) => t.value === timezone)?.label ?? timezone}</strong>
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-72 overflow-y-auto">
               {slots.map((slot) => {
@@ -300,7 +302,7 @@ export default function SchedulePage() {
                     }`}
                   >
                     <span className="block font-semibold text-[var(--text)]">{dateLabel}</span>
-                    <span className="block text-[var(--muted)] mt-0.5">{timeLabel}</span>
+                    <span className="block text-[var(--muted)] mt-0.5 font-medium">{timeLabel}</span>
                   </button>
                 );
               })}
@@ -313,7 +315,7 @@ export default function SchedulePage() {
           return (
           <div className="card-lively border-[var(--success)]/30 bg-[var(--success-soft)]/30">
             <p className="mb-1 font-medium">Selected slot</p>
-            <p className="text-[var(--muted)] mb-5">
+            <p className="text-[var(--text)] mb-5 font-semibold">
               {dateLabel} at {timeLabel}
             </p>
             <button
