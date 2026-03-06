@@ -81,7 +81,8 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
   const aeBusyWithBuffer = addBufferToBusySlots(aeBusySlots);
   const aeMergedBusy = mergeOverlappingSlots(aeBusyWithBuffer);
 
-  const allSesBusy: { seId: string; slots: { start: Date; end: Date }[] }[] = [];
+  // Only SEs with calendar connected can be considered for availability
+  const allSesBusy: { seId: string; slots: { start: Date; end: Date }[] | null }[] = [];
   for (const se of ses) {
     try {
       const seBusy = await getBusySlots(se.id, startDate, endDate);
@@ -91,8 +92,16 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
         slots: mergeOverlappingSlots(seBusyWithBuffer),
       });
     } catch {
-      allSesBusy.push({ seId: se.id, slots: [] });
+      // SE has no Google Calendar connected - do not count as available
+      allSesBusy.push({ seId: se.id, slots: null });
     }
+  }
+
+  const sesWithCalendar = allSesBusy.filter((s) => s.slots !== null);
+  if (sesWithCalendar.length === 0) {
+    throw new Error(
+      'No Solution Engineers with Google Calendar connected for this segment and region. Ask SEs to sign in with Google once to connect their calendar.'
+    );
   }
 
   const existingMeetings = await prisma.meeting.findMany({
@@ -145,6 +154,7 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
       let atLeastOneSeAvailable = false;
       for (let i = 0; i < allSesBusy.length; i++) {
         const seBusy = allSesBusy[i].slots;
+        if (seBusy === null) continue; // SE calendar not connected - skip
         const hasConflict = seBusy.some(
           (b) => b.start < slotEndBuffer && b.end > slotStartBuffer
         );
@@ -217,7 +227,9 @@ export async function assignSE(
     .map((c) => c.se);
 
   if (seCandidates.length === 0) {
-    throw new Error('No SE available for this time slot');
+    throw new Error(
+      'No SE available for this time slot. Ensure SEs have signed in with Google (to connect Calendar), and are assigned to this segment and region.'
+    );
   }
 
   seCandidates.sort((a, b) => {

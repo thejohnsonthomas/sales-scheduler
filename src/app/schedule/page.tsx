@@ -20,6 +20,7 @@ export default function SchedulePage() {
   const [endDate, setEndDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; startTime: string } | null>(null);
   const [slots, setSlots] = useState<{ startTime: string; endTime: string; date: string }[]>([]);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
 
   const { data: segments } = useQuery({
     queryKey: ['segments'],
@@ -41,12 +42,22 @@ export default function SchedulePage() {
 
   const searchSlots = async () => {
     if (!me?.id || !segmentId || !regionId || !startDate || !endDate) return;
+    setSlotsError(null);
     const res = await fetch(
       `/api/availability?aeId=${me.id}&segmentId=${segmentId}&regionId=${regionId}&startDate=${startDate}&endDate=${endDate}&duration=${duration}`
     );
     const data = await res.json();
-    if (data.slots) setSlots(data.slots);
-    else setSlots([]);
+    if (!res.ok) {
+      setSlots([]);
+      setSlotsError(data.error ?? 'Failed to load slots');
+      return;
+    }
+    if (data.slots) {
+      setSlots(data.slots);
+      setSlotsError(null);
+    } else {
+      setSlots([]);
+    }
   };
 
   const scheduleMutation = useMutation({
@@ -192,6 +203,11 @@ export default function SchedulePage() {
           </button>
         </div>
 
+        {slotsError && (
+          <div className="card mb-6 border-[var(--warning)] bg-[var(--warning)]/10">
+            <p className="text-sm text-[var(--warning)]">{slotsError}</p>
+          </div>
+        )}
         {slots.length > 0 && (
           <div className="card mb-6">
             <h2 className="font-semibold mb-4">Available Slots</h2>
