@@ -77,7 +77,7 @@ export default function SchedulePage() {
     if (!me?.id || !segmentId || !regionId || !startDate || !endDate) return;
     setSlotsError(null);
     const res = await fetch(
-      `/api/availability?aeId=${me.id}&segmentId=${segmentId}&regionId=${regionId}&startDate=${startDate}&endDate=${endDate}&duration=${duration}`
+      `/api/availability?aeId=${me.id}&segmentId=${segmentId}&regionId=${regionId}&startDate=${startDate}&endDate=${endDate}&duration=${duration}&timezone=${encodeURIComponent(timezone)}`
     );
     const data = await res.json();
     if (!res.ok) {

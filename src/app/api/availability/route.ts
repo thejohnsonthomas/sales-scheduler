@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth-utils';
 import { findAvailableSlots } from '@/lib/scheduling-engine';
 import { Role } from '@prisma/client';
 import { parse, startOfDay, endOfDay } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
   const startDateStr = searchParams.get('startDate');
   const endDateStr = searchParams.get('endDate');
   const duration = searchParams.get('duration');
+  const timezone = searchParams.get('timezone') ?? undefined;
 
   if (!aeId || !segmentId || !regionId || !startDateStr || !endDateStr || !duration) {
     return NextResponse.json(
@@ -34,10 +36,24 @@ export async function GET(req: NextRequest) {
   let startDate: Date;
   let endDate: Date;
   try {
-    startDate = startOfDay(parse(startDateStr, 'yyyy-MM-dd', new Date()));
-    endDate = endOfDay(parse(endDateStr, 'yyyy-MM-dd', new Date()));
+    const startParsed = parse(startDateStr, 'yyyy-MM-dd', new Date());
+    const endParsed = parse(endDateStr, 'yyyy-MM-dd', new Date());
+    if (timezone) {
+      // Interpret date range in the user's timezone so "March 8–14" means those days in that TZ
+      startDate = fromZonedTime(
+        new Date(startParsed.getFullYear(), startParsed.getMonth(), startParsed.getDate(), 0, 0, 0),
+        timezone
+      );
+      endDate = fromZonedTime(
+        new Date(endParsed.getFullYear(), endParsed.getMonth(), endParsed.getDate(), 23, 59, 59, 999),
+        timezone
+      );
+    } else {
+      startDate = startOfDay(startParsed);
+      endDate = endOfDay(endParsed);
+    }
   } catch {
-    return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid date format or timezone' }, { status: 400 });
   }
 
   try {

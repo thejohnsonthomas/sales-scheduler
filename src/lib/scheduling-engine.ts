@@ -5,7 +5,7 @@ import {
   mergeOverlappingSlots,
   checkSlotAvailability,
 } from './calendar';
-import { addMinutes, startOfDay, endOfDay, eachDayOfInterval, format } from 'date-fns';
+import { addMinutes, format } from 'date-fns';
 import { getCacheKey, getCachedSlots, setCachedSlots, invalidateAvailability } from './availability-cache';
 
 const BUFFER_MINUTES = 10;
@@ -125,59 +125,54 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
   const meetingMerged = mergeOverlappingSlots(meetingBusySlots);
 
   const slots: AvailableSlot[] = [];
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const stepMs = 15 * 60 * 1000;
+  let current = new Date(startDate.getTime());
 
-  for (const day of days) {
-    const dayStart = startOfDay(day);
-    const dayEnd = endOfDay(day);
-    let current = new Date(Math.max(dayStart.getTime(), startDate.getTime()));
+  while (current.getTime() < endDate.getTime()) {
+    const slotEnd = addMinutes(current, durationMinutes);
+    if (slotEnd.getTime() > endDate.getTime()) break;
 
-    while (addMinutes(current, durationMinutes + BUFFER_MINUTES * 2) <= dayEnd) {
-      const slotEnd = addMinutes(current, durationMinutes);
-      if (slotEnd > endDate) break;
+    const slotStartBuffer = addMinutes(current, -BUFFER_MINUTES);
+    const slotEndBuffer = addMinutes(slotEnd, BUFFER_MINUTES);
 
-      const slotStartBuffer = addMinutes(current, -BUFFER_MINUTES);
-      const slotEndBuffer = addMinutes(slotEnd, BUFFER_MINUTES);
-
-      const isAeBusy = aeMergedBusy.some(
-        (b) => b.start < slotEndBuffer && b.end > slotStartBuffer
-      );
-      if (isAeBusy) {
-        current = addMinutes(current, 15);
-        continue;
-      }
-
-      const isMeetingConflict = meetingMerged.some(
-        (b) => b.start < slotEndBuffer && b.end > slotStartBuffer
-      );
-      if (isMeetingConflict) {
-        current = addMinutes(current, 15);
-        continue;
-      }
-
-      let atLeastOneSeAvailable = false;
-      for (let i = 0; i < allSesBusy.length; i++) {
-        const seBusy = allSesBusy[i].slots;
-        if (seBusy === null) continue; // SE calendar not connected - skip
-        const hasConflict = seBusy.some(
-          (b) => b.start < slotEndBuffer && b.end > slotStartBuffer
-        );
-        if (!hasConflict) {
-          atLeastOneSeAvailable = true;
-          break;
-        }
-      }
-
-      if (atLeastOneSeAvailable) {
-        slots.push({
-          startTime: format(current, "HH:mm"),
-          endTime: format(slotEnd, "HH:mm"),
-          date: format(current, 'yyyy-MM-dd'),
-        });
-      }
-
-      current = addMinutes(current, 15);
+    const isAeBusy = aeMergedBusy.some(
+      (b) => b.start.getTime() < slotEndBuffer.getTime() && b.end.getTime() > slotStartBuffer.getTime()
+    );
+    if (isAeBusy) {
+      current = new Date(current.getTime() + stepMs);
+      continue;
     }
+
+    const isMeetingConflict = meetingMerged.some(
+      (b) => b.start.getTime() < slotEndBuffer.getTime() && b.end.getTime() > slotStartBuffer.getTime()
+    );
+    if (isMeetingConflict) {
+      current = new Date(current.getTime() + stepMs);
+      continue;
+    }
+
+    let atLeastOneSeAvailable = false;
+    for (let i = 0; i < allSesBusy.length; i++) {
+      const seBusy = allSesBusy[i].slots;
+      if (seBusy === null) continue;
+      const hasConflict = seBusy.some(
+        (b) => b.start.getTime() < slotEndBuffer.getTime() && b.end.getTime() > slotStartBuffer.getTime()
+      );
+      if (!hasConflict) {
+        atLeastOneSeAvailable = true;
+        break;
+      }
+    }
+
+    if (atLeastOneSeAvailable) {
+      slots.push({
+        startTime: format(current, 'HH:mm'),
+        endTime: format(slotEnd, 'HH:mm'),
+        date: format(current, 'yyyy-MM-dd'),
+      });
+    }
+
+    current = new Date(current.getTime() + stepMs);
   }
 
   setCachedSlots(cacheKey, slots);
