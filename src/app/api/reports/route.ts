@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
-import { startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
+import {
+  startOfWeek,
+  startOfMonth,
+  endOfWeek,
+  endOfMonth,
+  parseISO,
+} from 'date-fns';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,20 +17,59 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const view = searchParams.get('view') ?? 'weekly';
+  const periodType = searchParams.get('periodType') ?? 'week';
+  const startDateParam = searchParams.get('startDate');
+  const endDateParam = searchParams.get('endDate');
+  const weekStartParam = searchParams.get('weekStart');
+  const monthParam = searchParams.get('month');
+  const yearParam = searchParams.get('year');
+  const seId = searchParams.get('seId');
+  const aeId = searchParams.get('aeId');
+  const regionId = searchParams.get('regionId');
+  const segmentId = searchParams.get('segmentId');
+
+  let periodStart: Date;
+  let periodEnd: Date;
 
   const now = new Date();
-  const periodStart = view === 'monthly' ? startOfMonth(now) : startOfWeek(now, { weekStartsOn: 1 });
-  const periodEnd = view === 'monthly' ? endOfMonth(now) : endOfWeek(now, { weekStartsOn: 1 });
+
+  if (periodType === 'daterange' && startDateParam && endDateParam) {
+    periodStart = startOfDay(parseISO(startDateParam));
+    periodEnd = endOfDay(parseISO(endDateParam));
+  } else if (periodType === 'week' && weekStartParam) {
+    const weekDate = parseISO(weekStartParam);
+    periodStart = startOfWeek(weekDate, { weekStartsOn: 1 });
+    periodEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
+  } else if (periodType === 'month' && monthParam && yearParam) {
+    const m = parseInt(monthParam, 10);
+    const y = parseInt(yearParam, 10);
+    const monthDate = new Date(y, m - 1, 1);
+    periodStart = startOfMonth(monthDate);
+    periodEnd = endOfMonth(monthDate);
+  } else if (periodType === 'week') {
+    periodStart = startOfWeek(now, { weekStartsOn: 1 });
+    periodEnd = endOfWeek(now, { weekStartsOn: 1 });
+  } else {
+    periodStart = startOfMonth(now);
+    periodEnd = endOfMonth(now);
+  }
+
+  const where: Parameters<typeof prisma.meeting.findMany>[0]['where'] = {
+    status: 'scheduled',
+    startTime: { gte: periodStart },
+    endTime: { lte: periodEnd },
+  };
+
+  if (seId) where.seId = seId;
+  if (aeId) where.aeId = aeId;
+  if (regionId) where.regionId = regionId;
+  if (segmentId) where.segmentId = segmentId;
 
   const meetings = await prisma.meeting.findMany({
-    where: {
-      status: 'scheduled',
-      startTime: { gte: periodStart },
-      endTime: { lte: periodEnd },
-    },
+    where,
     include: {
       se: { select: { id: true, name: true, email: true } },
+      ae: { select: { id: true, name: true, email: true } },
       segment: true,
       region: true,
     },
@@ -84,7 +129,7 @@ export async function GET(req: NextRequest) {
   const segmentRegionReport = Array.from(bySegmentRegion.values());
 
   return NextResponse.json({
-    view,
+    periodType,
     periodStart: periodStart.toISOString(),
     periodEnd: periodEnd.toISOString(),
     totalMeetings: total,
@@ -93,4 +138,16 @@ export async function GET(req: NextRequest) {
     byRegion: regionReport,
     bySegmentRegion: segmentRegionReport,
   });
+}
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function endOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
 }
