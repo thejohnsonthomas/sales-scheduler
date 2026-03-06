@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { requireAdmin } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 import {
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
     periodEnd = endOfMonth(now);
   }
 
-  const where: Parameters<typeof prisma.meeting.findMany>[0]['where'] = {
+  const where: Prisma.MeetingWhereInput = {
     status: 'scheduled',
     startTime: { gte: periodStart },
     endTime: { lte: periodEnd },
