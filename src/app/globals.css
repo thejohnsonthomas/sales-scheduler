@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0f0f12;
+  --card: #18181c;
+  --border: #2a2a2e;
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)];
+  }
+  .btn-secondary {
+    @apply btn bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--border)];
+  }
+  .card {
+    @apply bg-[var(--card)] border border-[var(--border)] rounded-xl p-6;
+  }
+  .input {
+    @apply w-full px-4 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)];
+  }
+}

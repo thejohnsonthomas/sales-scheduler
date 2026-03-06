@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SOLUTION_ENGINEER
+  ACCOUNT_EXECUTIVE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  role          Role      @default(ACCOUNT_EXECUTIVE)
+  enabled       Boolean   @default(true)
+  googleId      String?   @unique
+  refreshToken  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  userSegments   UserSegment[]
+  userRegions    UserRegion[]
+  meetingsAsAE   Meeting[]       @relation("MeetingAE")
+  meetingsAsSE   Meeting[]       @relation("MeetingSE")
+  capacityLimits CapacityLimit?
+  roundRobinState RoundRobinState[]
+}
+
+model Segment {
+  id               String           @id @default(cuid())
+  name             String           @unique
+  description      String?
+  createdAt        DateTime         @default(now())
+
+  userSegments     UserSegment[]
+  meetings         Meeting[]
+  roundRobinState  RoundRobinState[]
+}
+
+model Region {
+  id               String           @id @default(cuid())
+  name             String           @unique
+  description      String?
+  createdAt        DateTime         @default(now())
+
+  userRegions      UserRegion[]
+  meetings         Meeting[]
+  roundRobinState  RoundRobinState[]
+}
+
+model UserSegment {
+  id        String   @id @default(cuid())
+  userId    String
+  segmentId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segment Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, segmentId])
+  @@index([segmentId])
+  @@index([userId])
+}
+
+model UserRegion {
+  id        String   @id @default(cuid())
+  userId    String
+  regionId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  region Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, regionId])
+  @@index([regionId])
+  @@index([userId])
+}
+
+model Meeting {
+  id              String   @id @default(cuid())
+  customerEmail   String
+  durationMinutes Int
+  segmentId       String
+  regionId        String
+  aeId            String
+  seId            String
+  startTime       DateTime
+  endTime         DateTime
+  googleEventId   String?
+  status          String   @default("scheduled")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ae      User    @relation("MeetingAE", fields: [aeId], references: [id], onDelete: Cascade)
+  se      User    @relation("MeetingSE", fields: [seId], references: [id], onDelete: Cascade)
+  segment Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  region  Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@index([aeId])
+  @@index([seId])
+  @@index([segmentId])
+  @@index([regionId])
+  @@index([startTime])
+  @@index([segmentId, regionId])
+}
+
+model RoundRobinState {
+  id         String   @id @default(cuid())
+  segmentId  String
+  regionId   String
+  userId     String
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segment Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  region  Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, regionId, userId])
+  @@index([segmentId, regionId])
+}
+
+model CapacityLimit {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  maxMeetingsPerDay    Int      @default(6)
+  maxMeetingsPerWeek   Int      @default(25)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UtilizationMetric {
+  id          String   @id @default(cuid())
+  userId      String?
+  segmentId   String?
+  regionId    String?
+  date        DateTime
+  metricType  String
+  bookedCount Int      @default(0)
+  capacity    Int      @default(0)
+  utilization Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, date])
+  @@index([segmentId, regionId, date])
+  @@index([date])
+}
+
+model ForecastData {
+  id           String   @id @default(cuid())
+  segmentId    String?
+  regionId     String?
+  forecastDate DateTime
+  predictedDemand Int   @default(0)
+  capacity     Int     @default(0)
+  status       String
+  createdAt    DateTime @default(now())
+
+  @@index([segmentId, regionId])
+  @@index([forecastDate])
+}
