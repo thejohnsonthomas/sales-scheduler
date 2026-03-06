@@ -53,6 +53,7 @@ export default function SchedulePage() {
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [timezone, setTimezone] = useState('America/New_York');
   const [calendarWarning, setCalendarWarning] = useState<string | null>(null);
+  const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null);
 
   const { data: segments } = useQuery({
     queryKey: ['segments'],
@@ -118,12 +119,17 @@ export default function SchedulePage() {
       setCustomerEmail('');
       searchSlots();
       if (data?.calendarCreated === false && data?.calendarError) {
+        setScheduleSuccess(null);
         setCalendarWarning(
           `Meeting saved but could not add to Google Calendar: ${data.calendarError}. Please add it to your calendar manually.`
         );
         setTimeout(() => setCalendarWarning(null), 12000);
       } else {
         setCalendarWarning(null);
+        setScheduleSuccess(
+          "Meeting scheduled. The event is on the SE's calendar; you and the customer will receive a calendar invite."
+        );
+        setTimeout(() => setScheduleSuccess(null), 8000);
       }
     },
   });
@@ -261,6 +267,11 @@ export default function SchedulePage() {
         {slotsError && (
           <div className="card mb-8 border-[var(--warning)] bg-[var(--warning-soft)]">
             <p className="text-sm text-[var(--warning)]">{slotsError}</p>
+          </div>
+        )}
+        {scheduleSuccess && (
+          <div className="card mb-8 border-[var(--success)] bg-[var(--success-soft)]">
+            <p className="text-sm text-[var(--success)]">{scheduleSuccess}</p>
           </div>
         )}
         {calendarWarning && (
