@@ -139,7 +139,8 @@ export async function getSegmentRegionCapacity(
 
   const results: SegmentRegionCapacity[] = [];
 
-  for (const [, { ses: segmentSes, segment, region }] of segmentRegionMap) {
+  const entries = Array.from(segmentRegionMap.entries());
+  for (const [, { ses: segmentSes, segment, region }] of entries) {
     let totalCapacity = 0;
     for (const se of segmentSes) {
       const limits = se.capacityLimits;
