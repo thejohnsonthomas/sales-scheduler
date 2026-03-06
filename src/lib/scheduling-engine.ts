@@ -42,8 +42,9 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
     durationMinutes
   );
 
-  const cached = getCachedSlots(cacheKey);
-  if (cached) return cached as AvailableSlot[];
+  // Skip cache so we always use current calendar data (avoids stale "all slots")
+  // const cached = getCachedSlots(cacheKey);
+  // if (cached) return cached as AvailableSlot[];
 
   const [ae, segment, region] = await Promise.all([
     prisma.user.findUnique({
@@ -67,6 +68,7 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
     where: {
       role: 'SOLUTION_ENGINEER',
       enabled: true,
+      refreshToken: { not: null },
       userSegments: { some: { segmentId } },
       userRegions: { some: { regionId } },
     },
@@ -74,7 +76,9 @@ export async function findAvailableSlots(params: SlotSearchParams): Promise<Avai
   });
 
   if (ses.length === 0) {
-    throw new Error('No Solution Engineers available for this segment and region');
+    throw new Error(
+      'No Solution Engineers with Google Calendar connected for this segment and region. Assign SEs to this segment/region and ask them to sign in with Google once.'
+    );
   }
 
   const aeBusySlots = await getBusySlots(aeId, startDate, endDate);
@@ -190,6 +194,7 @@ export async function assignSE(
     where: {
       role: 'SOLUTION_ENGINEER',
       enabled: true,
+      refreshToken: { not: null },
       userSegments: { some: { segmentId } },
       userRegions: { some: { regionId } },
     },
