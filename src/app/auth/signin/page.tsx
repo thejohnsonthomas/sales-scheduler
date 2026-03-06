@@ -4,15 +4,17 @@ import { signIn } from 'next-auth/react';
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
-      <div className="card max-w-md w-full mx-4 text-center">
-        <h1 className="text-2xl font-bold mb-2">Sales Meeting Scheduler</h1>
+    <div className="min-h-screen flex items-center justify-center relative z-10">
+      <div className="card-lively max-w-md w-full mx-4 text-center border-[var(--accent)]/20">
+        <h1 className="text-2xl font-bold mb-2 bg-gradient-to-r from-[var(--accent)] to-[var(--gradient-end)] bg-clip-text text-transparent">
+          Sales Meeting Scheduler
+        </h1>
         <p className="text-[var(--muted)] mb-8">
           Sign in with your Google account to continue
         </p>
         <button
           onClick={() => signIn('google', { callbackUrl: '/' })}
-          className="btn-primary w-full flex items-center justify-center gap-3 py-3"
+          className="btn-primary w-full flex items-center justify-center gap-3 py-3.5 rounded-xl"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path

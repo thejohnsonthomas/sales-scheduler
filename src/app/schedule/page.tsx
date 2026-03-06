@@ -52,6 +52,7 @@ export default function SchedulePage() {
   const [slots, setSlots] = useState<{ startTime: string; endTime: string; date: string }[]>([]);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [timezone, setTimezone] = useState('America/New_York');
+  const [calendarWarning, setCalendarWarning] = useState<string | null>(null);
 
   const { data: segments } = useQuery({
     queryKey: ['segments'],
@@ -111,11 +112,19 @@ export default function SchedulePage() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { calendarCreated?: boolean; calendarError?: string }) => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
       setSelectedSlot(null);
       setCustomerEmail('');
       searchSlots();
+      if (data?.calendarCreated === false && data?.calendarError) {
+        setCalendarWarning(
+          `Meeting saved but could not add to Google Calendar: ${data.calendarError}. Please add it to your calendar manually.`
+        );
+        setTimeout(() => setCalendarWarning(null), 12000);
+      } else {
+        setCalendarWarning(null);
+      }
     },
   });
 
@@ -144,12 +153,15 @@ export default function SchedulePage() {
   const hasNoRegions = aeRegions.length === 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div className="min-h-screen">
       <Nav />
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Schedule Meeting</h1>
+      <main className="relative z-10 max-w-4xl mx-auto px-4 py-10">
+        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-[var(--text)] to-[var(--muted)] bg-clip-text text-transparent">
+          Schedule Meeting
+        </h1>
+        <p className="text-[var(--muted)] mb-8">Book a demo on the SE&apos;s calendar; you and the customer are added as participants.</p>
 
-        <div className="card mb-6 space-y-4">
+        <div className="card-lively mb-8 space-y-5">
           <div>
             <label className="block text-sm font-medium mb-1">Customer Email</label>
             <input
@@ -240,38 +252,44 @@ export default function SchedulePage() {
           <button
             onClick={searchSlots}
             disabled={!segmentId || !regionId || !startDate || !endDate || !canSchedule}
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
           >
             Find Available Slots
           </button>
         </div>
 
         {slotsError && (
-          <div className="card mb-6 border-[var(--warning)] bg-[var(--warning)]/10">
+          <div className="card mb-8 border-[var(--warning)] bg-[var(--warning-soft)]">
             <p className="text-sm text-[var(--warning)]">{slotsError}</p>
           </div>
         )}
+        {calendarWarning && (
+          <div className="card mb-8 border-[var(--warning)] bg-[var(--warning-soft)]">
+            <p className="text-sm text-[var(--warning)]">{calendarWarning}</p>
+          </div>
+        )}
         {slots.length > 0 && (
-          <div className="card mb-6">
-            <h2 className="font-semibold mb-1">Available Slots</h2>
-            <p className="text-sm text-[var(--muted)] mb-4">
+          <div className="card-lively mb-8 border-l-4 border-l-[var(--accent)]">
+            <h2 className="font-semibold text-lg mb-1">Available Slots</h2>
+            <p className="text-sm text-[var(--muted)] mb-5">
               Date: DD Mon YY · Time: 12hr · Timezone: {TIMEZONES.find((t) => t.value === timezone)?.label ?? timezone}
             </p>
-            <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-72 overflow-y-auto">
               {slots.map((slot) => {
                 const { dateLabel, timeLabel } = formatSlotInTimezone(slot.date, slot.startTime, timezone);
+                const isSelected = selectedSlot?.date === slot.date && selectedSlot?.startTime === slot.startTime;
                 return (
                   <button
                     key={`${slot.date}-${slot.startTime}`}
                     onClick={() => setSelectedSlot({ date: slot.date, startTime: slot.startTime })}
-                    className={`p-2 rounded-lg text-sm border transition-colors text-left ${
-                      selectedSlot?.date === slot.date && selectedSlot?.startTime === slot.startTime
-                        ? 'border-[var(--accent)] bg-[var(--accent)]/20'
-                        : 'border-[var(--border)] hover:border-[var(--accent)]'
+                    className={`p-3 rounded-xl text-sm border-2 text-left transition-all duration-200 ${
+                      isSelected
+                        ? 'border-[var(--accent)] bg-[var(--accent-soft)] ring-2 ring-[var(--accent)]/50 shadow-lg shadow-[var(--accent)]/10'
+                        : 'border-[var(--border)] hover:border-[var(--accent)]/50 hover:bg-[var(--card-hover)]'
                     }`}
                   >
-                    <span className="block font-medium">{dateLabel}</span>
-                    <span className="block text-[var(--muted)]">{timeLabel}</span>
+                    <span className="block font-semibold text-[var(--text)]">{dateLabel}</span>
+                    <span className="block text-[var(--muted)] mt-0.5">{timeLabel}</span>
                   </button>
                 );
               })}
@@ -282,9 +300,10 @@ export default function SchedulePage() {
         {selectedSlot && (() => {
           const { dateLabel, timeLabel } = formatSlotInTimezone(selectedSlot.date, selectedSlot.startTime, timezone);
           return (
-          <div className="card">
-            <p className="mb-4">
-              Selected: {dateLabel} at {timeLabel}
+          <div className="card-lively border-[var(--success)]/30 bg-[var(--success-soft)]/30">
+            <p className="mb-1 font-medium">Selected slot</p>
+            <p className="text-[var(--muted)] mb-5">
+              {dateLabel} at {timeLabel}
             </p>
             <button
               onClick={() => scheduleMutation.mutate()}
@@ -294,7 +313,7 @@ export default function SchedulePage() {
               {scheduleMutation.isPending ? 'Scheduling...' : 'Confirm & Schedule'}
             </button>
             {scheduleMutation.isError && (
-              <p className="mt-2 text-[var(--danger)] text-sm">
+              <p className="mt-3 text-[var(--danger)] text-sm">
                 {(scheduleMutation.error as Error).message}
               </p>
             )}

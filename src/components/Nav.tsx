@@ -24,22 +24,25 @@ export function Nav() {
   ];
 
   return (
-    <nav className="border-b border-[var(--border)] bg-[var(--card)]">
+    <nav className="relative z-10 border-b border-[var(--border)] bg-[var(--card)]/95 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-14">
+        <div className="flex justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link href="/" className="font-semibold text-lg">
+            <Link
+              href="/"
+              className="font-bold text-lg bg-gradient-to-r from-[var(--accent)] to-[var(--gradient-end)] bg-clip-text text-transparent"
+            >
               Sales Scheduler
             </Link>
-            <div className="flex gap-4">
+            <div className="flex gap-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  className={`py-2.5 px-4 rounded-xl text-sm font-medium transition-all duration-200 ${
                     pathname === item.href
-                      ? 'bg-[var(--accent)] text-white'
-                      : 'text-[var(--muted)] hover:text-[var(--text)]'
+                      ? 'bg-[var(--accent)] text-white shadow-md shadow-[var(--accent)]/20'
+                      : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]'
                   }`}
                 >
                   {item.label}
@@ -47,16 +50,16 @@ export function Nav() {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-[var(--muted)]">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-[var(--muted)] max-w-[140px] truncate">
               {session.user.name ?? session.user.email}
             </span>
-            <span className="text-xs px-2 py-1 rounded bg-[var(--border)]">
+            <span className="badge bg-[var(--accent-soft)] text-[var(--accent)]">
               {session.user.role.replace('_', ' ')}
             </span>
             <button
               onClick={() => signOut({ callbackUrl: '/auth/signin' })}
-              className="text-sm text-[var(--muted)] hover:text-[var(--text)]"
+              className="text-sm text-[var(--muted)] hover:text-[var(--text)] px-3 py-1.5 rounded-lg hover:bg-[var(--bg-subtle)] transition-colors"
             >
               Sign out
             </button>

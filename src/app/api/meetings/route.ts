@@ -50,16 +50,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Meeting not found' }, { status: 500 });
     }
 
+    const summary = `Sales Demo - ${meeting.customerEmail}`;
+    const description = `Demo meeting with ${meeting.customerEmail}. AE: ${meeting.ae.email}`;
+    // SE is the organizer; AE and customer are participants so it shows on both calendars
+    const attendees = [meeting.ae.email, meeting.customerEmail];
+
+    let eventId: string | null = null;
+    let calendarError: string | null = null;
+
     try {
-      const eventId = await createCalendarEvent(
+      eventId = await createCalendarEvent(
         meeting.seId,
-        `Sales Demo - ${meeting.customerEmail}`,
-        `Demo meeting with ${meeting.customerEmail}. AE: ${meeting.ae.email}`,
+        summary,
+        description,
         meeting.startTime,
         meeting.endTime,
-        [meeting.ae.email, meeting.customerEmail]
+        attendees
       );
-
       if (eventId) {
         await prisma.meeting.update({
           where: { id: meetingId },
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (calErr) {
-      console.error('Calendar event creation failed:', calErr);
+      calendarError = calErr instanceof Error ? calErr.message : 'Calendar error';
     }
 
     return NextResponse.json({
@@ -75,6 +82,8 @@ export async function POST(req: NextRequest) {
       seId,
       startTime: meeting.startTime,
       endTime: meeting.endTime,
+      calendarCreated: !!eventId,
+      calendarError: calendarError || undefined,
     });
   } catch (e) {
     return NextResponse.json(
